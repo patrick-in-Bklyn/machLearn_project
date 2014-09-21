@@ -20,11 +20,10 @@ Despite all of these shortcomings, I settled on three methods of machine learnin
 
 The first was reformat the training file substantially. Adding a range of movement parameter between each new window = 'yes' parameter. I ran a hdda simulation on this reformatted file.  
         This was a very efficient method, providong 97% accuracy. 
-The second was to use a rpart method on the reformatted file with preprocessing to center and scale the variables. This produced 97% accuracy and was efficient in terms of processing time. 
+The second was to use a rpart method on the reformatted file with preprocessing to center and scale the variables. This produced a poor levels accuracy.  
 
-Finally I ran the hdda model on all variables using just the original training file. This provided poor results with accuracy at 
 
-To complete the assignment, however I also ran an rpart model on the accel_arm, accel_bel components of the file given. This method produced a model with 71% acuracy. 
+To complete the assignment, however I also ran an rpart model accel_arm, accel_belt, accel_dumbbell and accel_forearm components with and without preprocessing. When pre-processing was done(centering and scaling) results were xtremely poor. 
 
 
 
@@ -53,6 +52,17 @@ The data comes in two parts and carries a large number of empty fields. To begin
 
 
 ```
+## Loading required package: lattice
+## Loading required package: ggplot2
+## 
+## Attaching package: 'ggplot2'
+## 
+## The following object is masked _by_ '.GlobalEnv':
+## 
+##     mpg
+```
+
+```
 ## [1]  20 160
 ```
 
@@ -60,7 +70,7 @@ I then ran a series of plots on this data in an attempt to find a combination of
 
 I found that there were some areas where there is a reasonably clear relationship between the given data inputs and the quality classifier. For instance, the E classifier is reasonably easy to identify from the acceleration along the z plane of the belt monitor. Also, the y and z acceleration of the arm monitor show different patterns of curves depending on the quality of the exercise performed. 
 
-Each subject carried out the exercise in a different manner. As a result, there seems to be litlle or no consistent means to identify an activity across users. To address this, I scaled the range parameters 
+Each subject carried out the exercise in a different manner. As a result, there seems to be litlle or no consistent means to identify an activity across users.
 
 
 
@@ -203,11 +213,8 @@ I took the following approach to finding a predictive model.
         
 3. I tried to use a randon forest, but in every case it took too long to process. 
 
+For clarity ONLY the hdda model is shown below. 
 
-
-Having created a training and test set from the training data provided, I decided to take a sledgehammer approach first. I began by running a generalized linear model on the data, with all of the predictive parameters as a possibility. This failed because there were too many predictors. 
-
-I next used a random forest option("rf") and although this produced a result, the processing time was excessive so I discard this model. 
 
 ```
 ## Loading required package: HDclassif
@@ -254,7 +261,13 @@ confusionMatrix(Predictions, testing$classe)
 ```
 
 ```r
-FitRf <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_x+accel_belt_y+accel_belt_z, method = "rpart", preProcess = c("center", "scale"), data = training)
+set.seed(90683489)
+inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
+training <- new_dumbells[inTrain,]
+testing <- new_dumbells[-inTrain,]
+
+
+FitRf <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z+accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z, method = "rpart", data = training)
 ```
 
 ```
@@ -271,49 +284,49 @@ confusionMatrix(Predictions.Rf, testing$classe)
 ## Confusion Matrix and Statistics
 ## 
 ##           Reference
-## Prediction   A   B   C   D   E
-##          A 568  63  34  38  54
-##          B  71 226  51  29  83
-##          C 348 321 450 186  79
-##          D 397 243 231 463 217
-##          E  11  96  89  88 468
+## Prediction    A    B    C    D    E
+##          A 1011  248  382  228  121
+##          B   74  462  135  133  341
+##          C    4   38  166   18   38
+##          D  299  200  172  425  114
+##          E    7    1    0    0  287
 ## 
 ## Overall Statistics
-##                                        
-##                Accuracy : 0.444        
-##                  95% CI : (0.43, 0.458)
-##     No Information Rate : 0.284        
-##     P-Value [Acc > NIR] : <2e-16       
-##                                        
-##                   Kappa : 0.312        
-##  Mcnemar's Test P-Value : <2e-16       
+##                                         
+##                Accuracy : 0.479         
+##                  95% CI : (0.465, 0.493)
+##     No Information Rate : 0.284         
+##     P-Value [Acc > NIR] : <2e-16        
+##                                         
+##                   Kappa : 0.331         
+##  Mcnemar's Test P-Value : <2e-16        
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             0.407   0.2381   0.5263   0.5759   0.5194
-## Specificity             0.946   0.9408   0.7693   0.7346   0.9291
-## Pos Pred Value          0.750   0.4913   0.3251   0.2985   0.6223
-## Neg Pred Value          0.801   0.8373   0.8849   0.8983   0.8957
+## Sensitivity             0.725   0.4868   0.1942   0.5286   0.3185
+## Specificity             0.721   0.8273   0.9758   0.8085   0.9980
+## Pos Pred Value          0.508   0.4035   0.6288   0.3512   0.9729
+## Neg Pred Value          0.868   0.8704   0.8515   0.8974   0.8668
 ## Prevalence              0.284   0.1935   0.1743   0.1639   0.1837
-## Detection Rate          0.116   0.0461   0.0918   0.0944   0.0954
-## Detection Prevalence    0.154   0.0938   0.2822   0.3163   0.1533
-## Balanced Accuracy       0.677   0.5895   0.6478   0.6553   0.7242
+## Detection Rate          0.206   0.0942   0.0338   0.0867   0.0585
+## Detection Prevalence    0.406   0.2335   0.0538   0.2467   0.0602
+## Balanced Accuracy       0.723   0.6571   0.5850   0.6686   0.6583
 ```
 
-The hdda approach appears to produce a very accurate result with 97% accuracy. So I tested this against the given test data. This however did not work because there is no column for "classe" in the test file. 
+The hdda approach appears to produce a very accurate result with 97% accuracy.I could not test it against the test file provided because this file contained tyoo few rows to allow the separation into separate activity windows.
 
 ##Feeding the test files. 
-These methods did not work for submitting results. To address this I accepted a lower accuracy and used a rpart model on the most relevant metrick in the frame(at least according to my view). On that basis, I used arm acceleration and belt acceleration and dumbell acceleration to determine the best method to 
+ To address this I accepted a lower accuracy and used a rpart model on the most relevant metric in the frame(at least according to my view). On that basis, I used arm acceleration, forearm acceleration, belt acceleration and dumbell acceleration into a 'hdda' method on the original file. This produced poor results as can be seen below. 
 
 
 ```r
 set.seed(1234)
-inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
+inTrain <- createDataPartition(y = Dumbells$classe, p = 0.75, list = FALSE)
 training1 <- Dumbells[inTrain,]
 testing1 <- Dumbells[-inTrain,]
 
-Fit <- train(classe ~ accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z, method = "hdda", data = training1)
+Fit <- train(classe ~ accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z+accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z, method = "hdda", data = training1)
 ##Fit <- train(classe ~ ., method = 'rf', data = training)
 ```
 
@@ -329,33 +342,33 @@ confusionMatrix(Predictions_for_test, testing$classe)
 ## 
 ##           Reference
 ## Prediction   A   B   C   D   E
-##          A 591 275 230 266 381
-##          B 246 216 134 137  80
-##          C 218 153 178 131 138
-##          D 171 157 130 166 183
-##          E 169 148 183 104 119
+##          A 325 135  74 131 268
+##          B 203 117 207 140  66
+##          C 436 268 308 207 268
+##          D 236 256  89 169 220
+##          E 195 173 177 157  79
 ## 
 ## Overall Statistics
 ##                                         
-##                Accuracy : 0.259         
-##                  95% CI : (0.247, 0.271)
+##                Accuracy : 0.204         
+##                  95% CI : (0.192, 0.215)
 ##     No Information Rate : 0.284         
 ##     P-Value [Acc > NIR] : 1             
 ##                                         
-##                   Kappa : 0.054         
+##                   Kappa : 0.007         
 ##  Mcnemar's Test P-Value : <2e-16        
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             0.424    0.228   0.2082   0.2065   0.1321
-## Specificity             0.672    0.849   0.8419   0.8437   0.8491
-## Pos Pred Value          0.339    0.266   0.2176   0.2057   0.1646
-## Neg Pred Value          0.746    0.821   0.8343   0.8443   0.8130
-## Prevalence              0.284    0.194   0.1743   0.1639   0.1837
-## Detection Rate          0.121    0.044   0.0363   0.0338   0.0243
-## Detection Prevalence    0.355    0.166   0.1668   0.1646   0.1474
-## Balanced Accuracy       0.548    0.538   0.5251   0.5251   0.4906
+## Sensitivity            0.2330   0.1233   0.3602   0.2102   0.0877
+## Specificity            0.8267   0.8442   0.7088   0.8046   0.8246
+## Pos Pred Value         0.3483   0.1596   0.2071   0.1742   0.1012
+## Neg Pred Value         0.7305   0.8005   0.8399   0.8386   0.8006
+## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+## Detection Rate         0.0663   0.0239   0.0628   0.0345   0.0161
+## Detection Prevalence   0.1903   0.1495   0.3032   0.1978   0.1593
+## Balanced Accuracy      0.5299   0.4838   0.5345   0.5074   0.4562
 ```
 
 

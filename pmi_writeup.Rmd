@@ -20,11 +20,10 @@ Despite all of these shortcomings, I settled on three methods of machine learnin
 
 The first was reformat the training file substantially. Adding a range of movement parameter between each new window = 'yes' parameter. I ran a hdda simulation on this reformatted file.  
         This was a very efficient method, providong 97% accuracy. 
-The second was to use a rpart method on the reformatted file with preprocessing to center and scale the variables. This produced 97% accuracy and was efficient in terms of processing time. 
+The second was to use a rpart method on the reformatted file with preprocessing to center and scale the variables. This produced a poor levels accuracy.  
 
-Finally I ran the hdda model on all variables using just the original training file. This provided poor results with accuracy at 
 
-To complete the assignment, however I also ran an rpart model on the accel_arm, accel_bel components of the file given. This method produced a model with 71% acuracy. 
+To complete the assignment, however I also ran an rpart model accel_arm, accel_belt, accel_dumbbell and accel_forearm components with and without preprocessing. When pre-processing was done(centering and scaling) results were xtremely poor. 
 
 
 
@@ -85,7 +84,7 @@ I then ran a series of plots on this data in an attempt to find a combination of
 
 I found that there were some areas where there is a reasonably clear relationship between the given data inputs and the quality classifier. For instance, the E classifier is reasonably easy to identify from the acceleration along the z plane of the belt monitor. Also, the y and z acceleration of the arm monitor show different patterns of curves depending on the quality of the exercise performed. 
 
-Each subject carried out the exercise in a different manner. As a result, there seems to be litlle or no consistent means to identify an activity across users. To address this, I scaled the range parameters 
+Each subject carried out the exercise in a different manner. As a result, there seems to be litlle or no consistent means to identify an activity across users.
 
 
 
@@ -195,11 +194,8 @@ I took the following approach to finding a predictive model.
         
 3. I tried to use a randon forest, but in every case it took too long to process. 
 
+For clarity ONLY the hdda model is shown below. 
 
-
-Having created a training and test set from the training data provided, I decided to take a sledgehammer approach first. I began by running a generalized linear model on the data, with all of the predictive parameters as a possibility. This failed because there were too many predictors. 
-
-I next used a random forest option("rf") and although this produced a result, the processing time was excessive so I discard this model. 
 ```{r echo = FALSE, results = "hide"}
 ##PUT in The Model for the GLM... No PREPROCESSING
 
@@ -218,24 +214,30 @@ Fit$finalModel
 
 ```{r echo = TRUE}
 confusionMatrix(Predictions, testing$classe)
-FitRf <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_x+accel_belt_y+accel_belt_z, method = "rpart", preProcess = c("center", "scale"), data = training)
+set.seed(90683489)
+inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
+training <- new_dumbells[inTrain,]
+testing <- new_dumbells[-inTrain,]
+
+
+FitRf <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z+accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z, method = "rpart", data = training)
 Predictions.Rf <- predict(FitRf, newdata = testing)
 
 confusionMatrix(Predictions.Rf, testing$classe)
 ```
 
-The hdda approach appears to produce a very accurate result with 97% accuracy. So I tested this against the given test data. This however did not work because there is no column for "classe" in the test file. 
+The hdda approach appears to produce a very accurate result with 97% accuracy.I could not test it against the test file provided because this file contained tyoo few rows to allow the separation into separate activity windows.
 
 ##Feeding the test files. 
-These methods did not work for submitting results. To address this I accepted a lower accuracy and used a rpart model on the most relevant metrick in the frame(at least according to my view). On that basis, I used arm acceleration and belt acceleration and dumbell acceleration to determine the best method to 
+ To address this I accepted a lower accuracy and used a rpart model on the most relevant metric in the frame(at least according to my view). On that basis, I used arm acceleration, forearm acceleration, belt acceleration and dumbell acceleration into a 'hdda' method on the original file. This produced poor results as can be seen below. 
 
 ```{r results = 'hide'}
 set.seed(1234)
-inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
+inTrain <- createDataPartition(y = Dumbells$classe, p = 0.75, list = FALSE)
 training1 <- Dumbells[inTrain,]
 testing1 <- Dumbells[-inTrain,]
 
-Fit <- train(classe ~ accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z, method = "hdda", data = training1)
+Fit <- train(classe ~ accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z+accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z, method = "hdda", data = training1)
 ##Fit <- train(classe ~ ., method = 'rf', data = training)
 ```
 
