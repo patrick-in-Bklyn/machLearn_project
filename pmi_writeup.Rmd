@@ -5,7 +5,7 @@ date: "September 15, 2014"
 output: html_document
 ---
 The data used in this project was kindly provided by: 
-                Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition                                 of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+                Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
 
 Please read the licensing conditions on the site below as i want to comply with them .
 
@@ -16,13 +16,13 @@ The dataset contains various measurements taken from sensors located on a set of
 
 By graphically exploring the data I concluded that each user had a very different method of executing the bicep curl. Also, the data is "polluted" to some extent by including sensor readings for periods where the dumbells appear to be at rest. Also, to generate an accurate model, I reformatted the training file substantially to capture the range of motion across time windows. When I used a model from this data set, I achieved reasonably impressive accuracy on a partitioned test set. Unfortunately, it was not possible to run this model on the test set provided as this set had only 20 rows and there did not seem to be partitioned on the basis of time windows. 
 
-Despite all of these shortcomings, I settled on three methods of "machine learning.
+Despite all of these shortcomings, I settled on three methods of machine learning.
 
-The first was to run a naive bayes model on the training set. This produced poor results. 
+The first was reformat the training file substantially. Adding a range of movement parameter between each new window = 'yes' parameter. I ran a hdda simulation on this reformatted file.  
+        This was a very efficient method, providong 97% accuracy. 
+The second was to use a rpart method on the reformatted file with preprocessing to center and scale the variables. This produced 97% accuracy and was efficient in terms of processing time. 
 
-The second was to use a High Dimensional Discriminant Analysis (hdda) approach to the data set. This produced 97% accuracy and was efficient in terms of processing time. 
-
-Finally I ran the training using RF option. This was extremely exoensive in processing time, so I abandoned it. 
+Finally I ran the hdda model on all variables using just the original training file. This provided poor results with accuracy at 
 
 To complete the assignment, however I also ran an rpart model on the accel_arm, accel_bel components of the file given. This method produced a model with 71% acuracy. 
 
@@ -113,10 +113,10 @@ between the parameters should be similar.
 
 Finally, the classification of classe A appears to be polluted to some extent as it seems to include periods when the dumbells are at rest (see the )
 ```{r, echo = TRUE}
-##qplot(X,  accel_arm_y+accel_arm_z, data = Dumbells, colour = classe, facets = user_name~., ylab="Arm Acceleration in Y and Z planes - all Subjects")
-##qplot(raw_timestamp_part_1,  accel_arm_y, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Y Acceleration of arm Monitors", main = "Arm accel in Y Plane _ Carlito")
-##qplot(raw_timestamp_part_1,  accel_arm_z, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Z Acceleration of arm Monitors", main = "Arm Accel in Z plane - Carlito")
-##qplot(raw_timestamp_part_1,  accel_belt_z, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Z Acceleration of belt Monitors", main = "Belt Accel in Z plane -Carlito")
+qplot(X,  accel_arm_y+accel_arm_z, data = Dumbells, colour = classe, facets = user_name~., ylab="Arm Acceleration in Y and Z planes - all Subjects")
+qplot(raw_timestamp_part_1,  accel_arm_y, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Y Acceleration of arm Monitors", main = "Arm accel in Y Plane _ Carlito")
+qplot(raw_timestamp_part_1,  accel_arm_z, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Z Acceleration of arm Monitors", main = "Arm Accel in Z plane - Carlito")
+qplot(raw_timestamp_part_1,  accel_belt_z, data = Dumbells[Dumbells$user_name == "carlitos",], colour = classe, facets = user_name~., ylab="Z Acceleration of belt Monitors", main = "Belt Accel in Z plane -Carlito")
 ```
 
 
@@ -203,26 +203,25 @@ I next used a random forest option("rf") and although this produced a result, th
 ```{r echo = FALSE, results = "hide"}
 ##PUT in The Model for the GLM... No PREPROCESSING
 
-set.seed(300)
+set.seed(8765)
 inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
 training <- new_dumbells[inTrain,]
 testing <- new_dumbells[-inTrain,]
 
-Fit_nb <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_z_range, method = "nb", preProcess = c("center", "scale"), data = training)
 ##Fit <- train(classe ~ ., method = 'rf', data = training)
 Fit <- train(classe ~., method = "hdda", data = training)
 
 Predictions <- predict(Fit, newdata = testing)
 
-
+Fit$finalModel
 ```
 
 ```{r echo = TRUE}
 confusionMatrix(Predictions, testing$classe)
+FitRf <- train(classe ~accel_arm_x_range+accel_arm_y_range+accel_belt_x+accel_belt_y+accel_belt_z, method = "rpart", preProcess = c("center", "scale"), data = training)
+Predictions.Rf <- predict(FitRf, newdata = testing)
 
-Fit$finalModel
-
-
+confusionMatrix(Predictions.Rf, testing$classe)
 ```
 
 The hdda approach appears to produce a very accurate result with 97% accuracy. So I tested this against the given test data. This however did not work because there is no column for "classe" in the test file. 
@@ -230,18 +229,21 @@ The hdda approach appears to produce a very accurate result with 97% accuracy. S
 ##Feeding the test files. 
 These methods did not work for submitting results. To address this I accepted a lower accuracy and used a rpart model on the most relevant metrick in the frame(at least according to my view). On that basis, I used arm acceleration and belt acceleration and dumbell acceleration to determine the best method to 
 
-```{r }
-set.seed(300)
+```{r results = 'hide'}
+set.seed(1234)
 inTrain <- createDataPartition(y = new_dumbells$classe, p = 0.75, list = FALSE)
 training1 <- Dumbells[inTrain,]
 testing1 <- Dumbells[-inTrain,]
 
-Fit <- train(classe ~accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z, method = "rpart", data = training1)
+Fit <- train(classe ~ accel_arm_x+accel_arm_y+accel_arm_z+accel_belt_x+accel_belt_y+accel_belt_z+accel_forearm_x+accel_forearm_y+accel_forearm_z, method = "hdda", data = training1)
 ##Fit <- train(classe ~ ., method = 'rf', data = training)
+```
 
+```{r}
 
-Predictions <- predict(Fit, newdata = testing1)
-# 
+Predictions_for_test <- predict(Fit, newdata = testing1)
+
+confusionMatrix(Predictions_for_test, testing$classe)
 
 
 ```
